@@ -78,14 +78,79 @@ async function init(){
    if(error){message('บันทึกไม่สำเร็จ: '+error.message,true);return;}
    selectedMood='';$('note').value='';$('intensity').value=3;$('levelText').textContent='3';drawMoods();message('บันทึกความรู้สึกแล้ว 💗');await loadEntries();
  });
- const aiChat=$('aiChat'); let aiMode='both';
- document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{aiMode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));}));
- const addAiBubble=(text,kind)=>{const el=document.createElement('div');el.className='ai-bubble '+(kind==='user'?'ai-user':'ai-reply');el.textContent=text;aiChat.appendChild(el);aiChat.scrollTop=aiChat.scrollHeight;return el;};
- $('aiForm').addEventListener('submit',async e=>{e.preventDefault();const input=$('aiMessage'),text=input.value.trim();if(!text)return;input.value='';addAiBubble(text,'user');const waiting=addAiBubble('กำลังอ่านและคิดคำตอบให้…','reply');$('aiSend').disabled=true;
- try{const res=await fetch('/.netlify/functions/mood-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,mode:aiMode})});const data=await res.json();if(!res.ok)throw new Error(data.error||'เชื่อมต่อ AI ไม่สำเร็จ');waiting.textContent=data.reply||'ขอโทษนะ ตอนนี้ยังตอบไม่ได้ ลองใหม่อีกครั้งได้ไหม';}
- catch(err){waiting.textContent='ตอนนี้ AI ยังเชื่อมต่อไม่ได้: '+(err.message||'เกิดข้อผิดพลาด')+' — ถ้าเพิ่ง deploy ให้ตรวจสอบ Netlify Function และตัวแปร OPENAI_API_KEY';}
- finally{$('aiSend').disabled=false;input.focus();}});
- const {data:{session}}=await supabaseClient.auth.getSession();showApp(session);
+ 
+const aiChat=$('aiChat');
+let aiMode='both';
+
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
+  aiMode=b.dataset.mode;
+  document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));
+}));
+
+const addAiBubble=(text,kind)=>{
+  const el=document.createElement('div');
+  el.className='ai-bubble '+(kind==='user'?'ai-user':'ai-reply');
+  el.textContent=text;
+  aiChat.appendChild(el);
+  aiChat.scrollTop=aiChat.scrollHeight;
+  return el;
+};
+
+function localMoodReply(text,mode){
+  const t=text.toLowerCase();
+  let feeling='ทั่วไป';
+
+  if(/เหงา|คนเดียว|ไม่มีใคร|โดดเดี่ยว/.test(t)) feeling='เหงา';
+  else if(/เศร้า|เสียใจ|ร้องไห้|ผิดหวัง|อกหัก/.test(t)) feeling='เศร้า';
+  else if(/เครียด|กังวล|กลัว|กดดัน|สอบ|วิตก/.test(t)) feeling='เครียด';
+  else if(/เหนื่อย|เพลีย|หมดแรง|ไม่ไหว|ท้อ/.test(t)) feeling='เหนื่อย';
+  else if(/โกรธ|โมโห|หงุดหงิด|รำคาญ/.test(t)) feeling='โกรธ';
+  else if(/ดีใจ|มีความสุข|สำเร็จ|สนุก|ภูมิใจ/.test(t)) feeling='ดีใจ';
+
+  const replies={
+    'เหงา':'ความเหงามันทำให้วันธรรมดาหนักขึ้นได้เหมือนกันนะ',
+    'เศร้า':'ฟังดูเป็นเรื่องที่ทำให้มึงรู้สึกแย่มากเลยนะ ไม่จำเป็นต้องรีบทำตัวให้โอเคก็ได้',
+    'เครียด':'ดูเหมือนมึงกำลังแบกอะไรหลายอย่างอยู่เลย ค่อย ๆ จัดการทีละเรื่องก็ได้นะ',
+    'เหนื่อย':'ถ้าเหนื่อยมากก็พักก่อนได้นะ มึงไม่จำเป็นต้องจัดการทุกอย่างให้เสร็จตอนนี้',
+    'โกรธ':'ดูเหมือนเรื่องนี้จะทำให้มึงหงุดหงิดมากเลย ลองเว้นจังหวะก่อนตัดสินใจอะไรตอนอารมณ์แรงก็ได้',
+    'ดีใจ':'ดีจังเลย มึงมีสิทธิ์ดีใจกับเรื่องนี้เต็มที่เลยนะ',
+    'ทั่วไป':'ขอบคุณที่เล่าให้ฟังนะ บางทีการได้เรียบเรียงความรู้สึกออกมาก็ช่วยให้เราเข้าใจตัวเองขึ้นได้'
+  };
+
+  const listen=replies[feeling]+' เล่าเพิ่มได้นะว่าเกิดอะไรขึ้น';
+  const advice={
+    'เหงา':'ลองทักหาใครสักคนที่คุยด้วยแล้วสบายใจ หรือหาอะไรเล็ก ๆ ทำให้ตัวเองรู้สึกดีขึ้นก่อนก็ได้',
+    'เศร้า':'ลองให้เวลาตัวเองพัก แล้วค่อยคิดว่าจะจัดการเรื่องนี้ยังไง ไม่ต้องรีบหาคำตอบทั้งหมดในตอนนี้',
+    'เครียด':'ลองเลือกเรื่องที่สำคัญที่สุดแค่หนึ่งเรื่อง แล้วแบ่งเป็นขั้นตอนเล็ก ๆ เริ่มจากขั้นที่ทำได้ตอนนี้',
+    'เหนื่อย':'ลองพัก ดื่มน้ำ หรือหยุดงานที่ยังไม่เร่งด่วนสักครู่ แล้วค่อยกลับมาดูว่าจำเป็นต้องทำอะไรก่อน',
+    'โกรธ':'ลองถอยออกจากสถานการณ์สักพัก แล้วค่อยกลับมาคุยเมื่อพร้อม จะช่วยให้คิดได้ชัดขึ้น',
+    'ดีใจ':'ลองจดจำไว้ว่าอะไรทำให้มึงมีความสุขกับวันนี้ แล้วหาโอกาสทำสิ่งนั้นอีก',
+    'ทั่วไป':'ลองเขียนสิ่งที่กำลังคิดอยู่ แล้วแยกดูว่าเรื่องไหนแก้ได้ตอนนี้ และเรื่องไหนยังต้องใช้เวลา'
+  };
+
+  if(mode==='listen') return listen;
+  if(mode==='advice') return advice[feeling];
+  return listen+'\\n\\nถ้าอยากลองทำอะไรสักอย่างตอนนี้: '+advice[feeling];
+}
+
+$('aiForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const input=$('aiMessage');
+  const text=input.value.trim();
+  if(!text)return;
+
+  input.value='';
+  addAiBubble(text,'user');
+  const waiting=addAiBubble('กำลังอ่านข้อความ…','reply');
+  $('aiSend').disabled=true;
+
+  setTimeout(()=>{
+    waiting.textContent=localMoodReply(text,aiMode);
+    $('aiSend').disabled=false;
+    input.focus();
+  },350);
+});
+
  supabaseClient.auth.onAuthStateChange((_event,session)=>{showApp(session)});
 }
 document.addEventListener('DOMContentLoaded',init);
