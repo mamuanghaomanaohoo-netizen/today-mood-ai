@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7eaf1"><title>Today Mood</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script defer src="app.js"></script>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><div class="brand"><div class="logo">💗</div><div><h1>Today Mood</h1><p>พื้นที่เล็ก ๆ สำหรับความรู้สึกของคุณ</p></div></div><span class="privacy">🔒 พื้นที่ส่วนตัว</span></header>
+<section class="hero"><div><h2>วันนี้ใจเป็นยังไงบ้าง?</h2><p>ไม่มีความรู้สึกไหนผิด ลองหยุดฟังตัวเองสักนิด</p></div><span class="flower">🌷</span></section>
+<div id="notice" class="notice hidden" role="status"></div>
+<section id="auth" class="card">
+<h2 id="authTitle">เข้าสู่ระบบ</h2><p class="muted">ใช้บัญชีของคุณเพื่อบันทึกและเปิดดูข้อมูลจากอุปกรณ์อื่น</p>
+<form id="authForm"><label>อีเมล<input id="email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+<label>รหัสผ่าน<input id="password" type="password" minlength="8" autocomplete="current-password" required placeholder="อย่างน้อย 8 ตัวอักษร"></label>
+<div class="buttons"><button class="primary" id="authSubmit">เข้าสู่ระบบ</button><button class="secondary" type="button" id="toggleAuth">สร้างบัญชี</button></div></form>
+<p class="tiny">ใช้บัญชีของตัวเองเท่านั้น อย่าใช้รหัสผ่านร่วมกับผู้อื่น</p>
+</section>
+<div id="app" class="hidden">
+<div class="account"><span id="who"></span><button id="signOut" class="secondary">ออกจากระบบ</button></div>
+<div class="columns">
+<main>
+<section class="card"><h2>เช็กอินความรู้สึก</h2><p class="muted">เลือกอารมณ์ที่ใกล้เคียงกับตอนนี้ที่สุด</p><div id="moods" class="moods"></div>
+<label class="field">ระดับความรู้สึก <strong><span id="levelText">3</span>/5</strong><input id="intensity" type="range" min="1" max="5" value="3"></label>
+<label class="field">เรื่องที่เกี่ยวข้อง<select id="reason"><option>เรื่องทั่วไป</option><option>การเรียน / งาน</option><option>ครอบครัว</option><option>เพื่อนและสังคม</option><option>ความรัก</option><option>สุขภาพและการพักผ่อน</option><option>เรื่องส่วนตัว</option><option>ยังไม่แน่ใจ</option></select></label>
+<label class="field">บันทึกเพิ่มเติม <span class="muted">(ไม่บังคับ)</span><textarea id="note" maxlength="1500" placeholder="วันนี้เกิดอะไรขึ้น หรืออยากบอกอะไรกับตัวเอง..."></textarea></label>
+<button id="save" class="primary full">บันทึกอารมณ์</button>
+<p class="tiny">บันทึกส่วนตัวจะเห็นได้เฉพาะเจ้าของบัญชี หน้าผู้ดูแลแสดงเฉพาะสถิติรวม ไม่แสดงข้อความส่วนตัว</p></section>
+<section class="card ai-card"><h2>💗 Mood Companion</h2><p class="muted">เล่าได้ตามสบาย จะให้รับฟัง ให้กำลังใจ หรือช่วยคิดทางออกก็ได้</p>
+<div class="ai-modes" role="group" aria-label="รูปแบบการช่วยเหลือ"><button type="button" class="secondary ai-mode active" data-mode="both">ทั้งรับฟังและช่วยคิด</button><button type="button" class="secondary ai-mode" data-mode="listen">ขอระบายก่อน</button><button type="button" class="secondary ai-mode" data-mode="advice">ช่วยคิดทางออก</button></div>
+<div id="aiChat" class="ai-chat" aria-live="polite"><div class="ai-bubble ai-reply">หวัดดี 💗 วันนี้มีอะไรอยู่ในใจ เล่าให้ฟังได้นะ มึงเลือกได้ว่าจะให้เราฟังก่อนหรือช่วยคิดไปด้วยกัน</div></div>
+<form id="aiForm" class="ai-form"><label for="aiMessage">ข้อความของคุณ</label><textarea id="aiMessage" maxlength="2000" required placeholder="วันนี้ฉันรู้สึกว่า..."></textarea><button class="primary full" id="aiSend">คุยกับ Mood Companion</button></form>
+<p class="tiny">AI อาจเข้าใจผิดได้ และไม่ใช่ผู้เชี่ยวชาญด้านสุขภาพจิต อย่าใส่ข้อมูลที่ระบุตัวตนหรือข้อมูลลับ ข้อความที่ส่งจะถูกส่งไปยังบริการ AI เพื่อสร้างคำตอบ</p></section>
+<section class="card"><div class="cardhead"><div><h2>ประวัติของฉัน</h2><p class="muted">รายการบันทึกของบัญชีนี้เท่านั้น</p></div><button id="refresh" class="secondary">รีเฟรช</button></div><div id="history"><p class="empty">กำลังโหลด…</p></div></section>
+</main>
+<aside>
+<section class="card"><h2>ภาพรวมของฉัน</h2><div class="stats"><div class="stat"><b id="total">0</b><span>บันทึกทั้งหมด</span></div><div class="stat"><b id="average">—</b><span>ระดับเฉลี่ย / 5</span></div></div><div id="most" class="most">ยังไม่มีข้อมูล</div></section>
+<section class="card hidden" id="admin"><h2>ภาพรวมผู้ดูแล</h2><p class="muted">สถิติรวมเท่านั้น ไม่เปิดเผยบันทึกส่วนตัว</p><button class="secondary" id="loadAdmin">โหลดสถิติ</button><div id="adminStats"></div></section>
+<section class="card"><h2>ดูแลใจตัวเอง 🌿</h2><p class="tip">คุณไม่จำเป็นต้องรู้คำตอบทุกอย่างในวันนี้ แค่ยอมรับว่าตอนนี้รู้สึกอย่างไร ก็เป็นการดูแลตัวเองอย่างหนึ่งแล้ว</p></section>
+</aside>
+</div>
+</div>
+<footer>Today Mood · ข้อมูลอารมณ์เป็นข้อมูลส่วนตัว · คุณลบบันทึกของตัวเองได้</footer>
+</div>
+</body></html>
